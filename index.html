@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Izvoz/Uvoz Tracker - Excel Log</title>
     <style>
+        <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAuJsb4S6dSiso_AQI7ieRIkwEtRnXRuQs",
+    authDomain: "logistics-dashboard-dbb0e.firebaseapp.com",
+    projectId: "logistics-dashboard-dbb0e",
+    storageBucket: "logistics-dashboard-dbb0e.firebasestorage.app",
+    messagingSenderId: "298991727674",
+    appId: "1:298991727674:web:963a88e696329e59093103"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+        
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -472,81 +487,17 @@
         let nextId = 1;
         
         // Load data from memory on page load
-        function loadData() {
-            // Initialize with demo data if no data exists
-            if (shipments.length === 0) {
-                shipments = [
-                    {
-                        id: 1,
-                        refNumber: 'EX-2025-001',
-                        date: '2025-06-12',
-                        type: 'izvoz',
-                        partner: 'ABC Trading Ltd.',
-                        goods: 'Mašinski delovi',
-                        weight: 1250,
-                        value: '€15,000',
-                        status: 'zavrseno',
-                        priority: 'normalan',
-                        responsible: 'Marko Petrović',
-                        loadDate: '2025-06-10',
-                        deliveryDate: '2025-06-11',
-                        notes: 'Bez problema'
-                    },
-                    {
-                        id: 2,
-                        refNumber: 'IM-2025-001',
-                        date: '2025-06-11',
-                        type: 'uvoz',
-                        partner: 'DEF Solutions',
-                        goods: 'Elektronske komponente',
-                        weight: 850,
-                        value: '€22,500',
-                        status: 'u-toku',
-                        priority: 'hitno',
-                        responsible: 'Ana Jovanović',
-                        loadDate: '2025-06-13',
-                        deliveryDate: '2025-06-15',
-                        notes: 'Čeka se fito sertifikat'
-                    },
-                    {
-                        id: 3,
-                        refNumber: 'EX-2025-002',
-                        date: '2025-06-10',
-                        type: 'izvoz',
-                        partner: 'GHI International',
-                        goods: 'Tekstil',
-                        weight: 2100,
-                        value: '€8,750',
-                        status: 'problem',
-                        priority: 'hitno',
-                        responsible: 'Stefan Nikolić',
-                        loadDate: '2025-06-08',
-                        deliveryDate: '',
-                        notes: 'Kamion u kvaru'
-                    },
-                    {
-                        id: 4,
-                        refNumber: 'IM-2025-002',
-                        date: '2025-06-09',
-                        type: 'uvoz',
-                        partner: 'JKL Corp',
-                        goods: 'Sirovine',
-                        weight: 3400,
-                        value: '€12,300',
-                        status: 'nova',
-                        priority: 'srednji',
-                        responsible: 'Milica Stojanović',
-                        loadDate: '2025-06-14',
-                        deliveryDate: '2025-06-16',
-                        notes: 'Priprema dokumentacije'
-                    }
-                ];
-                nextId = 5;
-            }
-            renderTable();
-            updateStats();
-        }
-        
+       function loadData() {
+  db.collection("shipments").get().then((querySnapshot) => {
+    shipments = [];
+    querySnapshot.forEach((doc) => {
+      shipments.push({ id: doc.id, ...doc.data() });
+    });
+    renderTable();
+    updateStats();
+  });
+}
+
         function renderTable() {
             const tbody = document.getElementById('shipmentsBody');
             tbody.innerHTML = '';
@@ -764,18 +715,16 @@
                 notes: document.getElementById('notes').value
             };
             
-            if (editingId) {
-                // Update existing shipment
-                const index = shipments.findIndex(s => s.id === editingId);
-                if (index !== -1) {
-                    shipments[index] = { ...shipments[index], ...formData };
-                }
-            } else {
-                // Add new shipment
-                formData.id = nextId++;
-                shipments.push(formData);
-            }
-            
+         if (editingId) {
+  db.collection("shipments").doc(editingId).update(formData).then(() => {
+    loadData();
+  });
+} else {
+  db.collection("shipments").add(formData).then(() => {
+    loadData();
+  });
+}
+
             renderTable();
             updateStats();
             closeModal();
@@ -877,10 +826,9 @@
   // Function to delete a shipment from Firestore
   function deleteShipment(id) {
     db.collection("shipments").doc(id).delete().then(() => {
-      shipments = shipments.filter((shipment) => shipment.id !== id);
-      renderTable();
-    });
-  }
+     db.collection("shipments").doc(id).delete().then(() => {
+  loadData();
+});
 
   // Call loadShipments on page load
   window.onload = loadShipments;
